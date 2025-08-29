@@ -9,7 +9,6 @@ import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
 
-// Dummy data (for showing email info on step 1 success)
 const DUMMY_VALID_USERS = [
   { pan: "ABCDE1234F", gst: "22AAAAA0000A1Z5", email: "parv141206@gmail.com" },
   { pan: "FGHIJ5678K", gst: "33BBBBB0000B2Z6", email: "test@example.com" },
@@ -108,8 +107,6 @@ export default function LoginPage() {
           <CardTitle className="text-center">Login</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* 👇 Removed inline <Alert />, all handled via toast */}
-
           {step === "pan_gst" && (
             <form onSubmit={handlePanGstSubmit} className="space-y-4">
               <div className="space-y-2">
