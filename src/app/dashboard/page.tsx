@@ -8,6 +8,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
+import Dashboard from "~/components/Dashboard";
 
 interface CompanyInfo {
   company_name: string;
@@ -18,7 +19,7 @@ interface CompanyInfo {
   owner_email: string;
 }
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [isNew, setIsNew] = useState(false);
@@ -59,7 +60,7 @@ export default function Dashboard() {
       }
     };
 
-    checkCompany();
+    void checkCompany();
   }, [session?.user?.gst]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,9 +202,5 @@ export default function Dashboard() {
     );
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <h1 className="text-2xl font-bold">Welcome to your Dashboard</h1>
-    </div>
-  );
+  return <Dashboard />;
 }
