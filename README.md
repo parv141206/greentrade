@@ -1,10 +1,10 @@
-![header](https://capsule-render.vercel.app/api?type=Waving\&color=11ccff\&height=150\&section=header\&text=🚀%20Blockchain%20Distributed%20Ledger%20System%20for%20Green%20Hydrogen%20Fuel\&fontSize=60\&fontColor=ffffff)
+![header](https://capsule-render.vercel.app/api?type=Waving\&color=11ccff\&height=150\&section=header\&text=🚀%20Green%20Hydrogen%20Fuel%20Registry\&fontSize=60\&fontColor=ffffff)
 
 ---
 
 ## 📖 Overview
 
-This project implements a **blockchain-based distributed ledger** for **Green Hydrogen Fuel Tokens**.
+This project implements a **blockchain-based distributed ledger** for **Green Hydrogen Fuel Registry**.
 It allows producers and consumers to securely store and trade transactions on-chain with features like:
 
 * ✅ Immutable transaction history
@@ -136,9 +136,3 @@ cd frontend
 npm install
 npm start
 ```
-
----
-
-This will render beautifully on GitHub with the header banner and structured sections.
-
-👉 Do you also want me to add a **system architecture diagram** (like flow of producer → verification → tokenisation → trading → burning) in markdown/mermaid so that it looks visually appealing for presentations?
