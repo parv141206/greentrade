@@ -16,15 +16,17 @@ It allows producers and consumers to store transactions on-chain with features l
 ✅ Wallet-based identity management
 
 🛠️ Tech Stack
-
+'''
 >Solidity – Smart contract development
 >Hardhat – Ethereum development environment
 >Next.js – Backend integration
 >PostgreSQL – Off-chain storage
 >Ethers.js – Blockchain interaction
 >Ganache - Local testnet or public testnet
+'''
 
 📂 Project Structure
+'''
 /project-root
  ├── contracts/        # Solidity containing smart contracts
  ├── scripts/          # Deployment & interaction scripts
@@ -33,7 +35,7 @@ It allows producers and consumers to store transactions on-chain with features l
  ├── hardhat.config.js # Hardhat configuration
  ├── package.json
  └── README.md
-
+'''
 
 Note: Replace the dummy parv141206 with your Gmail account for OTP login.
 Currently, dummy data is used since government organizations take ~7–8 days to approve the data access APIs.
@@ -54,13 +56,14 @@ src/server/auth/config.ts => Replace Parv141206 with your gmail.
 
 🔐 Specifications & Special Features
 
+'''
 > OTP-based Login – Secure access using Gmail OTP authentication.
 > PAN Card & GST Verification – Identity validation for producers.
 > Solution to Double Spending – Ensures token uniqueness & prevents replay attacks.
 > Distributed Ledger Technology – Decentralized and fault-tolerant storage.
 > Live Data Graphs – Real-time dashboard for credit & transaction monitoring.
 > Secure Wallet Transmission – Encrypted wallet-to-wallet transfers.
-
+'''
 
 📌 Usage
 1. Register a Producer → PAN/GST verification, wallet creation.
