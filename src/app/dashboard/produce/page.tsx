@@ -150,7 +150,7 @@ export default function ProduceDashboard() {
           .eq("pan", session.user.pan)
           .order("created_at", { ascending: false }),
       ]);
-
+      console.log({ unverified, verified });
       const combined = [
         ...(unverified.data || []).map((r) => ({ ...r, verified: false })),
         ...(verified.data || []).map((r) => ({ ...r, verified: true })),

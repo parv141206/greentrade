@@ -5,7 +5,7 @@ import { sendOtp } from "~/lib/mailer";
 
 const validUsers = [
   { pan: "ABCDE1234F", gst: "22AAAAA0000A1Z5", email: "parv141206@gmail.com" },
-  { pan: "FGHIJ5666K", gst: "33BBBBB0000B2Z6", email: "test@example.com" },
+  { pan: "FGHIJ5666K", gst: "33BBBBB0000B2Z6", email: "parv141206@gmail.com" },
   { pan: "KLMNO9012P", gst: "11CCCCC0000C3Z7", email: "another@example.com" },
 ];
 

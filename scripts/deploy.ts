@@ -9,7 +9,8 @@ const __dirname = path.dirname(__filename);
 async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.GANACHE_URL);
 
-  const PRIVATE_KEY = process.env.OWNER_PRIVATE_KEY;
+  const PRIVATE_KEY =
+    "0x6397001106c5b5958218958a125368e71442b0dcbf039a8c5da18493b15ceb10";
   const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
   const artifactPath = path.join(
