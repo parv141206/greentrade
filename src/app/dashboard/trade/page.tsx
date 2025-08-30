@@ -268,7 +268,13 @@ export default function TradeDashboard() {
       fetchBalance(session.user.pan);
     }
   }, []);
-
+  if (!session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-lg">You must be logged in to view this page.</p>
+      </div>
+    );
+  }
   return (
     <div className="container mx-auto space-y-8 py-8">
       {/* Enhanced Header */}

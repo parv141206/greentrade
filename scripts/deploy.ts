@@ -7,10 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function main() {
-  const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+  const provider = new ethers.JsonRpcProvider(process.env.GANACHE_URL);
 
-  const PRIVATE_KEY =
-    "0xca57c092738076d02c9c9dc03e71c0c5e19b58f4b0c2a5a709a4cc15e83519eb";
+  const PRIVATE_KEY = process.env.OWNER_PRIVATE_KEY;
   const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
   const artifactPath = path.join(
