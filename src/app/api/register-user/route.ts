@@ -3,24 +3,20 @@ import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
 
-// -------------------- Load compiled contract --------------------
 const artifactPath = path.join(
   process.cwd(),
   "artifacts/contracts/HydrogenCredits.sol/HydrogenCredits.json",
 );
 const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
 
-// -------------------- Config --------------------
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const GANACHE_URL = process.env.GANACHE_URL;
-const OWNER_PRIVATE_KEY =
-  process.env.OWNER_PRIVATE_KEY;
+const OWNER_PRIVATE_KEY = process.env.OWNER_PRIVATE_KEY;
 
 let provider: ethers.JsonRpcProvider;
 let signer: ethers.Wallet;
 let contract: ethers.Contract;
 
-// -------------------- Init contract --------------------
 async function initContract() {
   if (contract) return contract;
 
@@ -31,22 +27,19 @@ async function initContract() {
   return contract;
 }
 
-// -------------------- POST handler for registering user --------------------
 export const POST = async (req: Request) => {
   try {
     const body = await req.json();
     const { walletAddress } = body;
 
     if (!walletAddress) {
-      return new Response(
-        JSON.stringify({ error: "Missing wallet address" }),
-        { status: 400 },
-      );
+      return new Response(JSON.stringify({ error: "Missing wallet address" }), {
+        status: 400,
+      });
     }
 
     const contract = await initContract();
 
-    // 1️⃣ Check if user already registered
     const isRegistered = await contract.registeredUsers(walletAddress);
     if (isRegistered) {
       return new Response(
@@ -55,7 +48,6 @@ export const POST = async (req: Request) => {
       );
     }
 
-    // 2️⃣ Register user
     const txRegister = await contract.registerUser(walletAddress);
     await txRegister.wait();
 

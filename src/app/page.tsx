@@ -6,7 +6,7 @@ import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 
 const navigation = [
   { name: "Home", href: "#" },
-  { name: "Dashboard", href: "#dashboard" },
+  { name: "Dashboard", href: "dashboard" },
   { name: "About", href: "#" },
   { name: "Contact Us", href: "#" },
 ];
@@ -125,9 +125,7 @@ export default function HomePage() {
         </Dialog>
       </header>
 
-      {/* Hero Section */}
       <div className="relative isolate px-6 pt-14 lg:px-8">
-        {/* Gradient Background Top */}
         <div
           aria-hidden="true"
           className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
@@ -141,7 +139,6 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Main Content */}
         <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
           <div className="hidden sm:mb-8 sm:flex sm:justify-center">
             <div className="relative rounded-full px-3 py-1 text-sm text-gray-600 ring-1 ring-gray-900/10 hover:ring-gray-900/20">
@@ -177,7 +174,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Gradient Background Bottom */}
         <div
           aria-hidden="true"
           className="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]"
