@@ -1,4 +1,4 @@
-![header](https://capsule-render.vercel.app/api?type=Waving\&color=11ccff\&height=150\&section=header\&text=🚀%20Green%20Hydrogen%20Fuel%20Registry\&fontSize=60\&fontColor=ffffff)
+![header](https://capsule-render.vercel.app/api?type=Waving\&color=11ccff\&height=150\&section=header\&text=%20Green%20Hydrogen%20Fuel%20Registry\&fontSize=50\&fontColor=ffffff)
 
 ---
 
