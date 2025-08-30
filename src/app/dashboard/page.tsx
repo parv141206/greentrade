@@ -1,206 +1,280 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { supabase } from "~/lib/supabase";
-import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/card";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "~/components/ui/form";
+import { Input } from "~/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import { Badge } from "~/components/ui/badge";
 import { toast } from "sonner";
-import Dashboard from "~/components/Dashboard";
+import { Loader2 } from "lucide-react";
 
-interface CompanyInfo {
-  company_name: string;
-  address: string;
-  sector: string;
-  phone: string;
-  owner_name: string;
-  owner_email: string;
+const formSchema = z.object({
+  hydrogenProduced: z
+    .string()
+    .min(1, "Amount is required")
+    .refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      "Must be positive",
+    ),
+  electricityConsumed: z
+    .string()
+    .min(1, "Electricity consumed is required")
+    .refine(
+      (val) => !isNaN(Number(val)) && Number(val) > 0,
+      "Must be positive",
+    ),
+});
+
+interface HydrogenRecord {
+  id: string;
+  pan: string;
+  gst: string;
+  hydrogen_produced: number;
+  electricity_consumed: number;
+  created_at: string;
+  verified: boolean;
 }
 
-export default function DashboardPage() {
-  const { data: session } = useSession();
-  const [loading, setLoading] = useState(true);
-  const [isNew, setIsNew] = useState(false);
-  const [form, setForm] = useState<CompanyInfo>({
-    company_name: "",
-    address: "",
-    sector: "",
-    phone: "",
-    owner_name: "",
-    owner_email: "",
+export default function HydrogenDataPage() {
+  const { data: session, status } = useSession();
+  const [records, setRecords] = useState<HydrogenRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      hydrogenProduced: "",
+      electricityConsumed: "",
+    },
   });
 
-  useEffect(() => {
-    if (!session?.user?.gst) return;
+  const fetchRecords = async () => {
+    if (!session?.user?.pan) return;
 
-    const checkCompany = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("companies")
-          .select("*")
-          .eq("gst", session.user.gst)
-          .single();
-
-        if (error && error.code !== "PGRST116") {
-          throw error;
-        }
-
-        if (data) {
-          setIsNew(false);
-        } else {
-          setIsNew(true);
-        }
-      } catch (err: any) {
-        console.error("Error fetching company info:", err.message || err);
-        toast.error("Failed to check company info.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void checkCompany();
-  }, [session?.user?.gst]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!session?.user?.gst || !session?.user?.pan) return;
-
+    setLoading(true);
     try {
-      const { error } = await supabase.from("companies").upsert({
-        gst: session.user.gst,
-        pan: session.user.pan,
-        email: session.user.email,
-        ...form,
-        created_at: new Date().toISOString(),
-      });
+      const [unverified, verified] = await Promise.all([
+        supabase
+          .from("unverified")
+          .select("*")
+          .eq("pan", session.user.pan)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("verified")
+          .select("*")
+          .eq("pan", session.user.pan)
+          .order("created_at", { ascending: false }),
+      ]);
 
-      if (error) throw error;
+      const combined = [
+        ...(unverified.data || []).map((r) => ({ ...r, verified: false })),
+        ...(verified.data || []).map((r) => ({ ...r, verified: true })),
+      ].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
 
-      toast.success("Company info saved successfully!");
-      setIsNew(false);
-    } catch (err: any) {
-      console.error("Error saving company info:", err.message || err);
-      toast.error("Failed to save company info.");
+      setRecords(combined);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to fetch records");
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
+  useEffect(() => {
+    if (session?.user?.pan) fetchRecords();
+  }, [session]);
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!session?.user?.pan || !session?.user?.gst) {
+      toast.error("User authentication data not available");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.from("unverified").insert([
+        {
+          pan: session.user.pan,
+          gst: session.user.gst,
+          hydrogen_produced: Number(values.hydrogenProduced),
+          electricity_consumed: Number(values.electricityConsumed),
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success("Data submitted successfully");
+      form.reset();
+      fetchRecords();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to submit data");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center">
-        Loading...
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   }
 
-  if (isNew) {
+  if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <Card className="w-full max-w-lg">
+      <div className="flex min-h-screen items-center justify-center">
+        <Card className="w-96">
           <CardHeader>
-            <CardTitle>Complete Company Profile</CardTitle>
+            <CardTitle>Authentication Required</CardTitle>
+            <CardDescription>
+              Please log in to access this page.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* PAN */}
-              <div>
-                <Label htmlFor="pan">PAN Number</Label>
-                <Input
-                  id="pan"
-                  name="pan"
-                  value={session?.user?.pan || ""}
-                  readOnly
-                  className="cursor-not-allowed bg-gray-100"
-                />
-              </div>
-
-              {/* GST */}
-              <div>
-                <Label htmlFor="gst">GST Number</Label>
-                <Input
-                  id="gst"
-                  name="gst"
-                  value={session?.user?.gst || ""}
-                  readOnly
-                  className="cursor-not-allowed bg-gray-100"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="company_name">Company Name</Label>
-                <Input
-                  id="company_name"
-                  name="company_name"
-                  value={form.company_name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  value={form.address}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="sector">Sector</Label>
-                <Input
-                  id="sector"
-                  name="sector"
-                  value={form.sector}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="owner_name">Owner Name</Label>
-                <Input
-                  id="owner_name"
-                  name="owner_name"
-                  value={form.owner_name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="owner_email">Owner Email</Label>
-                <Input
-                  id="owner_email"
-                  name="owner_email"
-                  type="email"
-                  value={form.owner_email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Save & Continue
-              </Button>
-            </form>
-          </CardContent>
         </Card>
       </div>
     );
   }
 
-  return <Dashboard />;
+  return (
+    <div className="container mx-auto space-y-8 py-8">
+      <h1 className="text-3xl font-bold">Hydrogen Production Data</h1>
+      <p className="text-muted-foreground">
+        Welcome, {session.user.email} (PAN: {session.user.pan})
+      </p>
+
+      {/* Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Submit New Data</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="hydrogenProduced"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hydrogen Produced (kg)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="electricityConsumed"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Electricity Consumed (KWh)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <Button type="submit" disabled={submitting}>
+                {submitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Submit Data
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Submitted Data</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Hydrogen (kg)</TableHead>
+                  <TableHead>Electricity (KWh)</TableHead>
+                  <TableHead>Efficiency</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {records.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell>
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>{r.hydrogen_produced.toFixed(2)}</TableCell>
+                    <TableCell>{r.electricity_consumed.toFixed(2)}</TableCell>
+                    <TableCell>
+                      {(r.hydrogen_produced / r.electricity_consumed).toFixed(
+                        4,
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          r.verified
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }
+                      >
+                        {r.verified ? "Verified" : "Unverified"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

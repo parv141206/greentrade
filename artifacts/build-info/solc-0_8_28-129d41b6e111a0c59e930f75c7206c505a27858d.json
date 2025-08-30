@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-129d41b6e111a0c59e930f75c7206c505a27858d",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/Counter.sol": "project/contracts/Counter.sol",
+    "contracts/HydrogenCredits.sol": "project/contracts/HydrogenCredits.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/Counter.sol": {
+        "content": "// SPDX-License-Identifier: UNLICENSED\npragma solidity ^0.8.28;\n\ncontract Counter {\n  uint public x;\n\n  event Increment(uint by);\n\n  function inc() public {\n    x++;\n    emit Increment(1);\n  }\n\n  function incBy(uint by) public {\n    require(by > 0, \"incBy: increment should be positive\");\n    x += by;\n    emit Increment(by);\n  }\n}\n"
+      },
+      "project/contracts/HydrogenCredits.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract HydrogenCredits {\n    address public admin;\n    mapping(address => uint256) public balances;\n    mapping(address => bool) public registeredUsers;\n\n    constructor() {\n        admin = msg.sender; // whoever deploys is the admin\n    }\n\n    modifier onlyAdmin() {\n        require(msg.sender == admin, \"Only admin can call this\");\n        _;\n    }\n\n    function registerUser(address user) public onlyAdmin {\n        require(!registeredUsers[user], \"User already registered\");\n        registeredUsers[user] = true;\n        balances[user] = 0;\n    }\n\n    function creditUser(address user, uint256 amount) public onlyAdmin {\n        require(registeredUsers[user], \"User not registered\");\n        balances[user] += amount;\n    }\n\n    function getBalance(address user) public view returns (uint256) {\n        return balances[user];\n    }\n}\n"
+      }
+    }
+  }
+}
