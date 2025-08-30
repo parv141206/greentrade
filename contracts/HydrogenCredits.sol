@@ -29,4 +29,12 @@ contract HydrogenCredits {
     function getBalance(address user) public view returns (uint256) {
         return balances[user];
     }
+
+    function transferBalance(address user, uint256 amount) public {
+        require(registeredUsers[user], "User no Registered");
+        require(balances[msg.sender] >= amount, "Insufficent Balance");
+
+        balances[msg.sender] -= amount;
+        balances[user] += amount;
+    }
 }
