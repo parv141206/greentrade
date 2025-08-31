@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import { supabase } from "~/lib/supabase";
 
 // Path to your contract artifact
 const artifactPath = path.join(
@@ -28,36 +29,116 @@ async function initContract() {
 }
 
 export const POST = async (req: Request) => {
-  try {
-    const { fromWallet, toWallet, hydrogenKg } = await req.json();
+  // --- MODIFICATION START ---
+  // 1. Destructure the new fromPan and toPan from the request body
+  const { fromWallet, toWallet, hydrogenKg, listingId, fromPan, toPan } =
+    await req.json();
+  let failedLogPanFrom = fromPan || fromWallet; // Fallback to wallet if PAN not provided
+  let failedLogPanTo = toPan || toWallet; // Fallback to wallet if PAN not provided
+  // --- MODIFICATION END ---
 
-    if (!fromWallet || !toWallet || !hydrogenKg) {
+  try {
+    // --- MODIFICATION START ---
+    // 2. Update validation to include the new PAN fields
+    if (
+      !fromWallet ||
+      !toWallet ||
+      !hydrogenKg ||
+      !listingId ||
+      !fromPan ||
+      !toPan
+    ) {
       return new Response(
         JSON.stringify({
-          error: "Missing fromWallet, toWallet, or hydrogenKg",
+          error: "Missing required parameters (wallet or PAN details).",
         }),
         { status: 400 },
       );
     }
+    // --- MODIFICATION END ---
 
     const contract = await initContract();
-    // The core function to transfer tokens
     const tx = await contract.transferTokens(fromWallet, toWallet, hydrogenKg);
-    await tx.wait(); // Wait for the transaction to be mined
+    const receipt = await tx.wait();
 
-    return new Response(
-      JSON.stringify({
+    const { data: listing, error: fetchError } = await supabase
+      .from("marketplace")
+      .select("credits")
+      .eq("id", listingId)
+      .single();
+
+    if (fetchError || !listing) {
+      throw new Error("Failed to find the marketplace listing to update.");
+    }
+
+    const remainingCredits = listing.credits - hydrogenKg;
+
+    if (remainingCredits > 0) {
+      const { error: updateError } = await supabase
+        .from("marketplace")
+        .update({ credits: remainingCredits })
+        .eq("id", listingId);
+      if (updateError) {
+        throw new Error(
+          `DB update failed after partial transfer: ${updateError.message}`,
+        );
+      }
+    } else {
+      const { error: updateError } = await supabase
+        .from("marketplace")
+        .update({ status: "completed" })
+        .eq("id", listingId);
+      if (updateError) {
+        throw new Error(
+          `DB update failed after full transfer: ${updateError.message}`,
+        );
+      }
+    }
+
+    // --- MODIFICATION START ---
+    // 3. Use the correct PANs when inserting the success log
+    const { error: auditError } = await supabase.from("audit_logs").insert([
+      {
+        from_pan: fromPan, // Use fromPan
+        to_pan: toPan, // Use toPan
+        amount: hydrogenKg,
+        tx_hash: receipt.transactionHash,
+        status: "success",
+        remarks: `Marketplace sale to listing ${listingId}`,
+      },
+    ]);
+    // --- MODIFICATION END ---
+
+    if (auditError) {
+      console.error("Audit log insert error:", auditError);
+      // Even if logging fails, the blockchain transaction succeeded, so we proceed.
+    }
+
+    return NextResponse.json(
+      {
         message: "Tokens transferred successfully",
-        fromWallet,
-        toWallet,
-        hydrogenKg,
-      }),
+        txHash: receipt.transactionHash,
+      },
       { status: 200 },
     );
   } catch (err: any) {
-    console.error(err);
-    return new Response(
-      JSON.stringify({ error: err.message || "Blockchain error" }),
+    console.error("Transfer error:", err);
+
+    // --- MODIFICATION START ---
+    // 4. Use the correct PANs (or fallbacks) when inserting the failure log
+    await supabase.from("audit_logs").insert([
+      {
+        from_pan: failedLogPanFrom,
+        to_pan: failedLogPanTo,
+        amount: hydrogenKg,
+        status: "failed",
+        remarks: err.message || "Blockchain error",
+      },
+    ]);
+    // --- MODIFICATION END ---
+
+    return NextResponse.json(
+      { error: err.message || "Blockchain error" },
       { status: 500 },
     );
   }

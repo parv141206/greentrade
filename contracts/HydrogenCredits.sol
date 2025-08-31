@@ -7,6 +7,7 @@ contract HydrogenCredits {
     mapping(address => bool) public registeredUsers;
 
     event TokensTransferred(address indexed from, address indexed to, uint256 amount);
+    event CreditsRetired(address indexed user, uint256 amount); // New event for retiring credits
 
     constructor() {
         admin = msg.sender; // The deployer is the admin
@@ -31,15 +32,7 @@ contract HydrogenCredits {
     function getBalance(address user) public view returns (uint256) {
         return balances[user];
     }
-
-    /**
-     * @notice Transfer tokens between two registered users.
-     * @dev This function can only be called by the admin (backend server),
-     * which orchestrates the transfer on behalf of the users.
-     * @param from The address of the seller.
-     * @param to The address of the buyer.
-     * @param amount The number of credits to transfer.
-     */
+    
     function transferTokens(address from, address to, uint256 amount) public onlyAdmin {
         require(registeredUsers[from], "Sender is not a registered user");
         require(registeredUsers[to], "Recipient is not a registered user");
@@ -49,5 +42,22 @@ contract HydrogenCredits {
         balances[to] += amount;
 
         emit TokensTransferred(from, to, amount);
+    }
+
+    /**
+     * @notice Retires a specific amount of credits from a user's balance.
+     * @dev This function can only be called by the admin (backend server).
+     * It is intended to be used by an automated process (cron job) to
+     * enforce daily credit expiration or retirement rules.
+     * @param user The address of the user whose credits will be retired.
+     * @param amount The number of credits to retire.
+     */
+    function retireCredits(address user, uint256 amount) public onlyAdmin {
+        require(registeredUsers[user], "User is not a registered user");
+        require(balances[user] >= amount, "Insufficient balance to retire");
+
+        balances[user] -= amount;
+
+        emit CreditsRetired(user, amount);
     }
 }
