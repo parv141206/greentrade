@@ -10,17 +10,13 @@ import * as Contracts from "./index.js";
 
 declare module "@nomicfoundation/hardhat-ethers/types" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
-  getContractFactory(name: 'Counter', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.Counter__factory>
-getContractFactory(name: 'HydrogenCredits', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.HydrogenCredits__factory>
+  getContractFactory(name: 'HydrogenCredits', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.HydrogenCredits__factory>
 
-  getContractAt(name: 'Counter', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.Counter>
-getContractAt(name: 'HydrogenCredits', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.HydrogenCredits>
+  getContractAt(name: 'HydrogenCredits', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.HydrogenCredits>
 
-  deployContract(name: 'Counter', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.Counter>
-deployContract(name: 'HydrogenCredits', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.HydrogenCredits>
+  deployContract(name: 'HydrogenCredits', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.HydrogenCredits>
 
-  deployContract(name: 'Counter', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.Counter>
-deployContract(name: 'HydrogenCredits', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.HydrogenCredits>
+  deployContract(name: 'HydrogenCredits', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.HydrogenCredits>
 
     // default types
     getContractFactory(

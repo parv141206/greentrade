@@ -6,9 +6,9 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface HydrogenCreditsInterface extends Interface {
-    getFunction(nameOrSignature: "admin" | "balances" | "creditUser" | "getBalance" | "registerUser" | "registeredUsers" | "transferTokens"): FunctionFragment;
+    getFunction(nameOrSignature: "admin" | "balances" | "creditUser" | "getBalance" | "registerUser" | "registeredUsers" | "retireCredits" | "transferTokens"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "TokensTransferred"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "CreditsRetired" | "TokensTransferred"): EventFragment;
 
     encodeFunctionData(functionFragment: 'admin', values?: undefined): string;
 encodeFunctionData(functionFragment: 'balances', values: [AddressLike]): string;
@@ -16,6 +16,7 @@ encodeFunctionData(functionFragment: 'creditUser', values: [AddressLike, BigNumb
 encodeFunctionData(functionFragment: 'getBalance', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'registerUser', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'registeredUsers', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'retireCredits', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferTokens', values: [AddressLike, AddressLike, BigNumberish]): string;
 
     decodeFunctionResult(functionFragment: 'admin', data: BytesLike): Result;
@@ -24,10 +25,23 @@ decodeFunctionResult(functionFragment: 'creditUser', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getBalance', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registerUser', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registeredUsers', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'retireCredits', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferTokens', data: BytesLike): Result;
   }
 
   
+    export namespace CreditsRetiredEvent {
+      export type InputTuple = [user: AddressLike, amount: BigNumberish];
+      export type OutputTuple = [user: string, amount: bigint];
+      export interface OutputObject {user: string, amount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace TokensTransferredEvent {
       export type InputTuple = [from: AddressLike, to: AddressLike, amount: BigNumberish];
       export type OutputTuple = [from: string, to: string, amount: bigint];
@@ -122,6 +136,14 @@ decodeFunctionResult(functionFragment: 'transferTokens', data: BytesLike): Resul
     
 
     
+    retireCredits: TypedContractMethod<
+      [user: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     transferTokens: TypedContractMethod<
       [from: AddressLike, to: AddressLike, amount: BigNumberish, ],
       [void],
@@ -162,16 +184,26 @@ getFunction(nameOrSignature: 'registeredUsers'): TypedContractMethod<
       [boolean],
       'view'
     >;
+getFunction(nameOrSignature: 'retireCredits'): TypedContractMethod<
+      [user: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'transferTokens'): TypedContractMethod<
       [from: AddressLike, to: AddressLike, amount: BigNumberish, ],
       [void],
       'nonpayable'
     >;
 
-    getEvent(key: 'TokensTransferred'): TypedContractEvent<TokensTransferredEvent.InputTuple, TokensTransferredEvent.OutputTuple, TokensTransferredEvent.OutputObject>;
+    getEvent(key: 'CreditsRetired'): TypedContractEvent<CreditsRetiredEvent.InputTuple, CreditsRetiredEvent.OutputTuple, CreditsRetiredEvent.OutputObject>;
+getEvent(key: 'TokensTransferred'): TypedContractEvent<TokensTransferredEvent.InputTuple, TokensTransferredEvent.OutputTuple, TokensTransferredEvent.OutputObject>;
 
     filters: {
       
+      'CreditsRetired(address,uint256)': TypedContractEvent<CreditsRetiredEvent.InputTuple, CreditsRetiredEvent.OutputTuple, CreditsRetiredEvent.OutputObject>;
+      CreditsRetired: TypedContractEvent<CreditsRetiredEvent.InputTuple, CreditsRetiredEvent.OutputTuple, CreditsRetiredEvent.OutputObject>;
+    
+
       'TokensTransferred(address,address,uint256)': TypedContractEvent<TokensTransferredEvent.InputTuple, TokensTransferredEvent.OutputTuple, TokensTransferredEvent.OutputObject>;
       TokensTransferred: TypedContractEvent<TokensTransferredEvent.InputTuple, TokensTransferredEvent.OutputTuple, TokensTransferredEvent.OutputObject>;
     

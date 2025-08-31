@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Building } from "lucide-react";
 import { supabase } from "~/lib/supabase";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,68 +27,69 @@ import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 
 const companySchema = z.object({
-  company_name: z.string().min(2, "Required"),
-  address: z.string().min(5, "Required"),
-  phone: z.string().min(10, "Required"),
-  sector: z.string().min(2, "Required"),
-  owner_name: z.string().min(2, "Required"),
-  owner_email: z.string().email("Invalid email"),
-  daily_usage: z.coerce.number().min(1, "Must be at least 1 credit"),
+  company_name: z.string().min(2, "Company name is required"),
+  address: z.string().min(5, "Address is required"),
+  phone: z.string().min(10, "A valid phone number is required"),
+  sector: z.string().min(2, "Sector is required"),
+  owner_name: z.string().min(2, "Owner's name is required"),
+  owner_email: z.string().email("A valid owner email is required"),
+  daily_usage: z.coerce.number().min(0, "Must be 0 or greater").default(0),
 });
 
 type CompanyForm = z.infer<typeof companySchema>;
 
-export default function HydrogenDataPage() {
+export default function DashboardPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [company, setCompany] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<CompanyForm>({
     resolver: zodResolver(companySchema),
-    defaultValues: {
-      company_name: "",
-      address: "",
-      phone: "",
-      sector: "",
-      owner_name: session?.user?.name || "",
-      owner_email: session?.user?.email || "",
-      daily_usage: 1,
-    },
   });
 
-  // Fetch company info
+  useEffect(() => {
+    if (session?.user) {
+      form.reset({
+        company_name: "",
+        address: "",
+        phone: "",
+        sector: "",
+        owner_name: session.user.name || "",
+        owner_email: session.user.email || "",
+        daily_usage: 1,
+      });
+    }
+  }, [session, form]);
+
   const fetchCompanyInfo = async () => {
-    if (!session) return;
+    if (!session?.user?.pan) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("companies")
-        .select(
-          `id, pan, gst, email, company_name, address, phone, sector, owner_name, owner_email, created_at, daily_usage, verified`,
-        )
+        .select(`*`)
         .eq("pan", session.user.pan)
-        .eq("gst", session.user.gst)
         .maybeSingle();
-
       if (error) throw error;
-
-      if (data) setCompany(data);
+      setCompany(data);
     } catch (err: any) {
-      console.error("Error fetching company info:", err?.message || err);
+      console.error("Error fetching company info:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (status === "authenticated") fetchCompanyInfo();
-  }, [status]);
+    if (status === "authenticated") {
+      fetchCompanyInfo();
+    } else if (status === "unauthenticated") {
+      setLoading(false);
+    }
+  }, [status, session]);
 
-  // Handle first-time sign-in form submit
   const onSubmit = async (values: CompanyForm) => {
-    if (!session) return;
+    if (!session?.user) return;
     setSubmitting(true);
     try {
       const { data, error } = await supabase
@@ -99,217 +99,193 @@ export default function HydrogenDataPage() {
             pan: session.user.pan,
             gst: session.user.gst,
             email: session.user.email,
-            company_name: values.company_name,
-            address: values.address,
-            phone: values.phone,
-            sector: values.sector,
-            owner_name: values.owner_name,
-            owner_email: values.owner_email,
-            daily_usage: values.daily_usage,
             verified: false,
+            ...values,
           },
         ])
-        .select();
-
+        .select()
+        .single();
       if (error) throw error;
-      if (!data || data.length === 0)
-        throw new Error("No data returned after insert");
-
-      setCompany(data[0]);
+      setCompany(data);
     } catch (err: any) {
-      console.error("Error inserting company info:", err?.message || err);
+      console.error("Error inserting company info:", err);
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   }
 
-  if (!session) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-center text-lg">Please log in to continue.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto space-y-6 py-8">
-      {company ? (
-        <Card className="border-gray-200 dark:border-gray-800">
+    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+      <div className="flex items-center">
+        <h1 className="text-lg font-semibold md:text-2xl">Dashboard</h1>
+      </div>
+      {loading ? (
+        <div className="flex h-full w-full items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      ) : company ? (
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              Company Information
+              <Building className="h-5 w-5" />
+              Welcome, {company.company_name}
             </CardTitle>
-            <CardDescription>Details registered for trading</CardDescription>
+            <CardDescription>
+              This is your company's main dashboard.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <p className="font-medium">Company Name:</p>
-              <p>{company.company_name}</p>
-            </div>
-            <div>
-              <p className="font-medium">PAN:</p>
-              <p>{company.pan}</p>
-            </div>
-            <div>
-              <p className="font-medium">GST:</p>
-              <p>{company.gst}</p>
-            </div>
-            <div>
-              <p className="font-medium">Email:</p>
-              <p>{company.email}</p>
-            </div>
-            <div>
-              <p className="font-medium">Phone:</p>
-              <p>{company.phone}</p>
-            </div>
-            <div>
-              <p className="font-medium">Address:</p>
-              <p>{company.address}</p>
-            </div>
-            <div>
-              <p className="font-medium">Sector:</p>
-              <p>{company.sector}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="font-medium">Verified:</p>
+          <CardContent className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-sm font-medium">
+                Verification Status
+              </p>
               {company.verified ? (
-                <Badge variant="success">Yes</Badge>
+                <Badge>Verified</Badge>
               ) : (
-                <Badge variant="destructive">No</Badge>
+                <Badge variant="destructive">Pending Verification</Badge>
               )}
             </div>
-            <div>
-              <p className="font-medium">Daily Usage:</p>
-              <p>{company.daily_usage} credits</p>
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-sm font-medium">PAN</p>
+              <p className="font-mono text-sm">{company.pan}</p>
             </div>
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-sm font-medium">GST</p>
+              <p className="font-mono text-sm">{company.gst}</p>
+            </div>
+            {/* Add more dashboard analytics cards here */}
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-gray-200 dark:border-gray-800">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-yellow-500" />
-              First-time Sign-in
+              Complete Your Profile
             </CardTitle>
             <CardDescription>
-              Complete your company profile to start trading
+              Provide your company's details to get started. Your account will
+              be pending verification after submission.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="company_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="sector"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sector</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="owner_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Owner Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="owner_email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Owner Email</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="daily_usage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Daily Credit Usage</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={1} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <Button
-                className="mt-4 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                onClick={form.handleSubmit(onSubmit)}
-                disabled={submitting}
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
               >
-                {submitting ? "Submitting..." : "Complete Profile"}
-              </Button>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="company_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Registered Address</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Phone</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="sector"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Sector</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="owner_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Owner's Full Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="owner_email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Owner's Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="daily_usage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estimated Daily Credit Usage</FormLabel>
+                        <FormControl>
+                          <Input type="number" min={0} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button type="submit" disabled={submitting}>
+                  {submitting && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Submit for Verification
+                </Button>
+              </form>
             </Form>
           </CardContent>
         </Card>
       )}
-    </div>
+    </main>
   );
 }

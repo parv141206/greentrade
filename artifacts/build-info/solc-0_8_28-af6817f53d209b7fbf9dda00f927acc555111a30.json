@@ -1,0 +1,35 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-af6817f53d209b7fbf9dda00f927acc555111a30",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/HydrogenCredits.sol": "project/contracts/HydrogenCredits.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/HydrogenCredits.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract HydrogenCredits {\n    address public admin;\n    mapping(address => uint256) public balances;\n    mapping(address => bool) public registeredUsers;\n\n    event TokensTransferred(address indexed from, address indexed to, uint256 amount);\n    event CreditsRetired(address indexed user, uint256 amount); // New event for retiring credits\n\n    constructor() {\n        admin = msg.sender; // The deployer is the admin\n    }\n\n    modifier onlyAdmin() {\n        require(msg.sender == admin, \"Only admin can call this function\");\n        _;\n    }\n\n    function registerUser(address user) public onlyAdmin {\n        require(!registeredUsers[user], \"User is already registered\");\n        registeredUsers[user] = true;\n        balances[user] = 0;\n    }\n\n    function creditUser(address user, uint256 amount) public onlyAdmin {\n        require(registeredUsers[user], \"User is not registered\");\n        balances[user] += amount;\n    }\n\n    function getBalance(address user) public view returns (uint256) {\n        return balances[user];\n    }\n    \n    function transferTokens(address from, address to, uint256 amount) public onlyAdmin {\n        require(registeredUsers[from], \"Sender is not a registered user\");\n        require(registeredUsers[to], \"Recipient is not a registered user\");\n        require(balances[from] >= amount, \"Insufficient balance to transfer\");\n\n        balances[from] -= amount;\n        balances[to] += amount;\n\n        emit TokensTransferred(from, to, amount);\n    }\n\n    /**\n     * @notice Retires a specific amount of credits from a user's balance.\n     * @dev This function can only be called by the admin (backend server).\n     * It is intended to be used by an automated process (cron job) to\n     * enforce daily credit expiration or retirement rules.\n     * @param user The address of the user whose credits will be retired.\n     * @param amount The number of credits to retire.\n     */\n    function retireCredits(address user, uint256 amount) public onlyAdmin {\n        require(registeredUsers[user], \"User is not a registered user\");\n        require(balances[user] >= amount, \"Insufficient balance to retire\");\n\n        balances[user] -= amount;\n\n        emit CreditsRetired(user, amount);\n    }\n}\n"
+      }
+    }
+  }
+}

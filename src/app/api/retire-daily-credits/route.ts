@@ -4,9 +4,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { supabase } from "~/lib/supabase";
+import { auth } from "~/server/auth/";
 
-// --- Contract Initialization (same as in transfer-tokens) ---
+// --- Wallet Generation Function ---
+function getWalletFromPAN(pan: string, provider: ethers.JsonRpcProvider) {
+  const hash = crypto.createHash("sha256").update(pan).digest("hex");
+  const privateKey = "0x" + hash;
+  return new ethers.Wallet(privateKey, provider);
+}
+
+// --- Contract Initialization ---
 const artifactPath = path.join(
   process.cwd(),
   "artifacts/contracts/HydrogenCredits.sol/HydrogenCredits.json",
@@ -16,15 +25,6 @@ const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const GANACHE_URL = process.env.GANACHE_URL;
 const OWNER_PRIVATE_KEY = process.env.OWNER_PRIVATE_KEY;
-// --- End Contract Initialization ---
-
-// --- NEW Environment Variables ---
-const CRON_SECRET = process.env.CRON_SECRET;
-const DAILY_RETIREMENT_AMOUNT = parseInt(
-  process.env.DAILY_RETIREMENT_AMOUNT || "1",
-  10,
-);
-// ---
 
 let provider: ethers.JsonRpcProvider;
 let signer: ethers.Wallet;
@@ -39,91 +39,121 @@ async function initContract() {
 }
 
 export const POST = async (req: NextRequest) => {
-  // 1. --- Security Check ---
-  const authorization = req.headers.get("Authorization");
-  if (authorization !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (isNaN(DAILY_RETIREMENT_AMOUNT) || DAILY_RETIREMENT_AMOUNT <= 0) {
+  // 1. --- Security Check: Verify Admin Session ---
+  const session = await auth();
+  if (session?.user?.role !== "admin") {
     return NextResponse.json(
-      { error: "Invalid DAILY_RETIREMENT_AMOUNT configured." },
-      { status: 500 },
+      { error: "Forbidden: Not an admin" },
+      { status: 403 },
     );
   }
 
   const contract = await initContract();
-  const summary = {
-    processed: 0,
-    successful: 0,
-    failed: 0,
-  };
+  const summary = { processed: 0, successful: 0, failed: 0 };
 
   try {
-    // 2. --- Fetch all users with a wallet address from your database ---
-    const { data: users, error: fetchError } = await supabase
-      .from("users") // Assuming you have a 'users' table with 'pan' and 'wallet_address'
-      .select("pan, wallet_address")
-      .not("wallet_address", "is", null);
+    // 2. --- Fetch companies ---
+    const { data: companies, error: companiesError } = await supabase
+      .from("companies")
+      .select("pan, daily_usage")
+      .eq("verified", true)
+      .not("pan", "is", null)
+      .gt("daily_usage", 0);
 
-    if (fetchError) {
-      throw new Error(`Failed to fetch users: ${fetchError.message}`);
+    if (companiesError)
+      throw new Error(`Failed to fetch companies: ${companiesError.message}`);
+    if (!companies || companies.length === 0) {
+      return NextResponse.json(
+        {
+          message: "No verified companies with daily usage found to process.",
+          summary,
+        },
+        { status: 200 },
+      );
     }
 
-    // 3. --- Loop through each user and attempt to retire credits ---
-    for (const user of users) {
+    // 4. --- Loop through each company ---
+    for (const company of companies) {
       summary.processed++;
+      const amountToRetire = company.daily_usage;
+      const pan = company.pan!;
+
+      // Generate wallet address on the fly
+      const userWallet = getWalletFromPAN(pan, provider);
+      const walletAddress = userWallet.address;
+
       try {
+        // =================================================================
+        // STEP 1: PRE-FLIGHT CHECKS (BEFORE SENDING TRANSACTION)
+        // =================================================================
+
+        // Check if the user is registered on the smart contract
+        const isRegistered = await contract.registeredUsers(walletAddress);
+        if (!isRegistered) {
+          throw new Error("User is not registered on the blockchain.");
+        }
+
+        // Check if the user has enough balance
+        const balanceBigInt = await contract.getBalance(walletAddress);
+        const balance = Number(balanceBigInt); // Convert BigInt to number for comparison
+
+        if (balance < amountToRetire) {
+          throw new Error(
+            `Insufficient balance. Has: ${balance}, needs: ${amountToRetire}.`,
+          );
+        }
+
         console.log(
-          `Attempting to retire ${DAILY_RETIREMENT_AMOUNT} credits from ${user.pan}...`,
+          `Checks passed for PAN ${pan}. Balance: ${balance}. Retiring: ${amountToRetire}`,
         );
 
-        // Call the new smart contract function
-        const tx = await contract.retireCredits(
-          user.wallet_address,
-          DAILY_RETIREMENT_AMOUNT,
-        );
+        // =================================================================
+        // STEP 2: EXECUTE TRANSACTION
+        // =================================================================
+        const tx = await contract.retireCredits(walletAddress, amountToRetire);
         const receipt = await tx.wait();
 
-        // Log success to audit table
-        await supabase.from("audit_logs").insert({
-          from_pan: user.pan,
-          to_pan: "RETIRED_POOL", // Use a system identifier for clarity
-          amount: DAILY_RETIREMENT_AMOUNT,
-          tx_hash: receipt.transactionHash,
-          status: "success",
-          remarks: "Daily credit retirement.",
-        });
-
-        summary.successful++;
-        console.log(`Successfully retired credits for ${user.pan}.`);
-      } catch (err: any) {
-        // This catch block handles errors like "insufficient balance"
-        summary.failed++;
-        console.error(
-          `Failed to retire credits for ${user.pan}: ${err.message}`,
+        const newBalance = await contract.getBalance(walletAddress);
+        console.log(
+          `SUCCESS for PAN ${pan}. Tx: ${receipt.transactionHash}. New Balance: ${newBalance}`,
         );
 
-        // Log failure to audit table
+        // Log success to database
         await supabase.from("audit_logs").insert({
-          from_pan: user.pan,
+          from_pan: pan,
           to_pan: "RETIRED_POOL",
-          amount: DAILY_RETIREMENT_AMOUNT,
+          amount: amountToRetire,
+          tx_hash: receipt.transactionHash,
+          status: "success",
+          remarks: `Daily retirement. Balance changed from ${balance} to ${newBalance}.`,
+        });
+        summary.successful++;
+      } catch (err: any) {
+        // =================================================================
+        // STEP 3: CATCH AND LOG FAILURES CLEARLY
+        // =================================================================
+        console.error(
+          `Retirement FAILED for PAN ${pan} (Wallet: ${walletAddress}). Reason: ${err.message}`,
+        );
+
+        summary.failed++;
+        // Log the specific failure reason to the database
+        await supabase.from("audit_logs").insert({
+          from_pan: pan,
+          to_pan: "RETIRED_POOL",
+          amount: amountToRetire,
           status: "failed",
-          remarks: `Daily retirement failed: ${err.message}`,
+          remarks: `Retirement failed: ${err.message}`,
         });
       }
     }
 
     return NextResponse.json(
-      { message: "Daily retirement process completed.", summary },
+      { message: "Retirement process completed.", summary },
       { status: 200 },
     );
   } catch (err: any) {
-    console.error(
-      "A critical error occurred during the retirement process:",
-      err,
-    );
+    console.error("Critical error in retirement process:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 };

@@ -10,7 +10,7 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(process.env.GANACHE_URL);
 
   const PRIVATE_KEY =
-    "0x6397001106c5b5958218958a125368e71442b0dcbf039a8c5da18493b15ceb10";
+    "0x3cd4ccf6fe5618eee01f25510871652606a7d64b644fd586a74fa84af212598a";
   const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
   const artifactPath = path.join(
