@@ -1,0 +1,47 @@
+hello i am writing the details of the components to be added in dashboard
+
+listing of the buyers
+cards
+	total demand ie sum
+	avg demand per user
+
+	max price for tokens
+	min price for tokens
+	avg price for tokens 
+
+pie chart
+sellers supply tracking then we can get our market details an our holdings in the current market
+
+change in demand overtime
+
+line graph based selling chart that shows the data and time for selling the data
+
+based on current generation can we predict the future needs
+
+CARDS for showing the current tokens
+and currency of money it has
+
+
+BUYERS SECTION 
+
+seller availibiltiy 
+
+cards 
+	total supply
+	avg asking price
+	lowest asking price
+	highest asking price
+	
+histogram based section that shows the distribution of the user that means that disparity and closeness of the data points
+ 
+
+
+
+generalisd section 
+
+based on logs we can make a chart that should be able to show the traffic rate
+like no of transaction and date to show daily traffic
+
+	suppky buyer ratio
+	
+line chart daily sequential showing of the avg chart this would show the avg market pattern in the data like bull or bear trade 
