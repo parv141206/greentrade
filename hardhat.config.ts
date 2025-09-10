@@ -1,42 +1,22 @@
-import type { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+import * as dotenv from "dotenv";
 
-import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
-import { configVariable } from "hardhat/config";
+dotenv.config();
 
-const config: HardhatUserConfig = {
-  plugins: [hardhatToolboxMochaEthersPlugin],
+const GANACHE_URL = process.env.GANACHE_URL || "http://127.0.0.1:7545";
+const GANACHE_PRIVATE_KEY = process.env.GANACHE_PRIVATE_KEY;
+
+export default {
   solidity: {
-    profiles: {
-      default: {
-        version: "0.8.28",
-      },
-      production: {
-        version: "0.8.28",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },
-    },
+    version: "0.8.28",
+    settings: { optimizer: { enabled: true, runs: 200 } },
   },
+  defaultNetwork: "ganache",
   networks: {
-    hardhatMainnet: {
-      type: "edr-simulated",
-      chainType: "l1",
-    },
-    hardhatOp: {
-      type: "edr-simulated",
-      chainType: "op",
-    },
-    sepolia: {
-      type: "http",
-      chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+    hardhat: {},
+    ganache: {
+      url: GANACHE_URL,
+      accounts: GANACHE_PRIVATE_KEY ? [GANACHE_PRIVATE_KEY] : [],
     },
   },
 };
-
-export default config;

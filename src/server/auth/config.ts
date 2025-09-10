@@ -10,19 +10,19 @@ const validUsers = [
   {
     pan: "ABCDE1234F",
     gst: "22AAAAA0000A1Z5",
-    email: "parv141206@gmail.com",
+    email: "devansjani@gmail.com",
     role: "admin",
   },
   {
     pan: "FGHIJ5666K",
     gst: "33BBBBB0000B2Z6",
-    email: "parv141206@gmail.com",
+    email: "devansjani@gmail.com",
     role: "user",
   },
   {
     pan: "KLMNO9012P",
     gst: "11CCCCC0000C3Z7",
-    email: "parv141206@gmail.com",
+    email: "devansjani@gmail.com",
     role: "user",
   },
 ];
@@ -88,7 +88,7 @@ export const authConfig = {
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = (user as any).id;
-        token.email = (user as any).email;
+        token.email = (user as unknown).email;
         token.pan = (user as any).pan;
         token.gst = (user as any).gst;
         token.role = (user as any).role; // <-- Add role to the token

@@ -10,7 +10,7 @@ import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
 
 const DUMMY_VALID_USERS = [
-  { pan: "ABCDE1234F", gst: "22AAAAA0000A1Z5", email: "parv141206@gmail.com" },
+  { pan: "ABCDE1234F", gst: "22AAAAA0000A1Z5", email: "devansjani@gmail.com" },
   { pan: "FGHIJ5678K", gst: "33BBBBB0000B2Z6", email: "test@example.com" },
   { pan: "KLMNO9012P", gst: "11CCCCC0000C3Z7", email: "another@example.com" },
 ];

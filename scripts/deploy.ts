@@ -1,37 +1,21 @@
-import { ethers } from "ethers";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { ethers } from "hardhat";
 
 async function main() {
-  const provider = new ethers.JsonRpcProvider(process.env.GANACHE_URL);
+  // Get the deployer account
+  const [deployer] = await ethers.getSigners();
+  console.log("Deploying with account:", deployer.address);
 
-  const PRIVATE_KEY =
-    "0x3cd4ccf6fe5618eee01f25510871652606a7d64b644fd586a74fa84af212598a";
-  const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+  // Compile & get contract factory
+  const ContractFactory = await ethers.getContractFactory("HydrogenCredits");
 
-  const artifactPath = path.join(
-    __dirname,
-    "../artifacts/contracts/HydrogenCredits.sol/HydrogenCredits.json",
-  );
-  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-
-  const factory = new ethers.ContractFactory(
-    artifact.abi,
-    artifact.bytecode,
-    wallet,
-  );
-
-  const contract = await factory.deploy();
+  // Deploy the contract
+  const contract = await ContractFactory.deploy();
   await contract.waitForDeployment();
 
-  console.log("Contract deployed to:", contract.target);
+  console.log("Contract deployed at:", contract.target);
 }
 
-main().catch((err) => {
+main().catch((err: Error) => {
   console.error(err);
   process.exit(1);
 });
